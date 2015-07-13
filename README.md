@@ -1,2 +1,2 @@
 # IntroCompSci
-For Racket files
+For Racket files - Fall 2015
