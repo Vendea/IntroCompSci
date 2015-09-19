@@ -20,7 +20,7 @@
 (define (string-last word) (string-ith word (- (string-length word) 1)))
 
 ;exercise 17 
-(define (bool-imply b1 b2) (if (not b1) true (and b2 true)))
+(define (bool-imply sunny friday) (if (not sunny) true (and friday true)))
 
 ;exercise 18
 (define (image-area picture) (* (image-width picture) (image-height picture)))
