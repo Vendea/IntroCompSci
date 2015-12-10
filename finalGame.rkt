@@ -113,29 +113,52 @@
 (define (dispOptions n)
   (above side1 smallRect side2 smallRect side3 smallRect side4FRONTEND
          smallRect side5FRONTEND smallRect side6FRONTEND))
+
+; check to see if gameState is a win for player
+(define (checkWin t)
+  (image=? (gameState-board t) (gameState-played t)))
+(check-expect (checkWin (make-gameState
+             (genBoard 0 0) MTB
+             (make-dragState empty-image 0 0 #false) 0 #false)) #false)
   
 ; render t -> image
 (define (render t)
-  (overlay
-   (cond
-     [(gameState-won t) WIN]
-     [else empty-image])
-   (place-image
+  (place-image
+   (text (number->string (floor (gameState-timer t))) TEXTSIZE BACKCOLOR)
+   (* .5 (+ LEFTBOUND RIGHTBOUND))
+   (- BIGHEIGHT TEXTSIZE)
+   (overlay
     (cond
-      [(dragState-bool (gameState-dragging t))
-       (dragState-img (gameState-dragging t))]
+      [(gameState-won t) WIN]
       [else empty-image])
-    (dragState-x (gameState-dragging t))
-    (dragState-y (gameState-dragging t))
-    (place-image 
-     (gameState-board t) (* .5 LEFTBOUND) (* .5 BIGHEIGHT)
+    (place-image
+     (cond
+       [(dragState-bool (gameState-dragging t))
+        (dragState-img (gameState-dragging t))]
+       [else empty-image])
+     (dragState-x (gameState-dragging t))
+     (dragState-y (gameState-dragging t))
      (place-image 
-      (overlay (gameState-played t) grid ) (* .5 (+ LEFTBOUND RIGHTBOUND)) (* .5 BIGHEIGHT)
-      (place-image (dispOptions 0) (* .5 (+ RIGHTBOUND BIGWIDTH)) (* .5 BIGHEIGHT) MTS))))))
+      (gameState-board t) (* .5 LEFTBOUND) (* .5 BIGHEIGHT)
+      (place-image 
+       (overlay (gameState-played t) grid ) (* .5 (+ LEFTBOUND RIGHTBOUND)) (* .5 BIGHEIGHT)
+       (place-image (dispOptions 0) (* .5 (+ RIGHTBOUND BIGWIDTH)) (* .5 BIGHEIGHT) MTS)))))))
 
 (define (mouseh t x y me) t)
 
-(define (tock t) t)
+(define (tock t)
+  (make-gameState (gameState-board t)
+                  (gameState-played t)
+                  (gameState-dragging t)
+                  (cond
+                    [(gameState-won t) (gameState-timer t)]
+                    [else
+                     (cond
+                       [(checkWin t) (gameState-timer t)]
+                       [else (+ (gameState-timer t) .05)])])
+                  (cond
+                    [(gameState-won t) #true]
+                    [else (checkWin t)])))
 
 ; gameRunner
 (define (main t)
