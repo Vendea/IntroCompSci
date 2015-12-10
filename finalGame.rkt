@@ -18,7 +18,7 @@
 ; mouse pos
 ; boolean true if dragging actively happening
 ; false if mouse goes outside window or releases
-(define-struct dragState [img xPos yPos bool])
+(define-struct dragState [img x y bool])
 ; this probably is not necessary anymore now that I will
 ; just place-image all the squares onto MTB
 (define-struct boardState [img])
@@ -32,6 +32,7 @@
 (define EXIT "leave")
 
 ; game constants
+(define WIN (text "YOU WIN!!" 70 "orange"))
 (define BIGWIDTH 1250)
 (define BIGHEIGHT 650)
 (define MEDSQUARE 300)
@@ -115,20 +116,32 @@
   
 ; render t -> image
 (define (render t)
-  (place-image 
-   (genBoard 0 0) (* .5 LEFTBOUND) (* .5 BIGHEIGHT)
-   (place-image 
-    (overlay (playBoard t) grid ) (* .5 (+ LEFTBOUND RIGHTBOUND)) (* .5 BIGHEIGHT)
-    (place-image (dispOptions 0) (* .5 (+ RIGHTBOUND BIGWIDTH)) (* .5 BIGHEIGHT)
-    MTS))))
+  (overlay
+   (cond
+     [(gameState-won t) WIN]
+     [else empty-image])
+   (place-image
+    (cond
+      [(dragState-bool (gameState-dragging t))
+       (dragState-img (gameState-dragging t))]
+      [else empty-image])
+    (dragState-x (gameState-dragging t))
+    (dragState-y (gameState-dragging t))
+    (place-image 
+     (gameState-board t) (* .5 LEFTBOUND) (* .5 BIGHEIGHT)
+     (place-image 
+      (overlay (gameState-played t) grid ) (* .5 (+ LEFTBOUND RIGHTBOUND)) (* .5 BIGHEIGHT)
+      (place-image (dispOptions 0) (* .5 (+ RIGHTBOUND BIGWIDTH)) (* .5 BIGHEIGHT) MTS))))))
 
-;(define (mouseh t a b c) 1)
+(define (mouseh t x y me) t)
 
-(define (tock t) 2)
+(define (tock t) t)
 
 ; gameRunner
 (define (main t)
-  (big-bang t
-            [to-draw render]))
-            ;[on-mouse mouseh]
-            ;[on-tick tock]))
+  (big-bang (make-gameState
+             (genBoard 0 0) MTB
+             (make-dragState empty-image 0 0 #false) 0 #false)
+            [to-draw render]
+            [on-mouse mouseh]
+            [on-tick tock]))
