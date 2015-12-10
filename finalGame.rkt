@@ -19,9 +19,6 @@
 ; boolean true if dragging actively happening
 ; false if mouse goes outside window or releases
 (define-struct dragState [img x y bool])
-; this probably is not necessary anymore now that I will
-; just place-image all the squares onto MTB
-(define-struct boardState [img])
 
 ; mouse constants
 (define ONCLICK "button-down")
@@ -41,9 +38,8 @@
 (define RIGHTBOUND 1000)
 (define TEXTSIZE 24)
 (define BACKCOLOR "black")
-; maybe add new game button if I feel like I have enough time
+
 (define newGame (overlay (text "New Game" TEXTSIZE BACKCOLOR) (rectangle 150 25 "outline" BACKCOLOR)))
-;
 (define MTB (square MEDSQUARE "outline" BACKCOLOR))
 (define MTS (overlay/align "left" "middle" 
    (beside/align "middle"
@@ -66,15 +62,14 @@
 (define side5 (overlay (triangle/ass 90 SMALLSQUARE SMALLSQUARE "solid" BACKCOLOR) (square SMALLSQUARE "solid" "white")))
 (define side5FRONTEND (overlay (triangle/ass 90 SMALLSQUARE SMALLSQUARE "solid" BACKCOLOR) (square SMALLSQUARE "outline" BACKCOLOR)))
 
-;helper functions
-;number and image -> column of images
+; number and image -> column of images
 (define (col n img) (cond [(= 1 n) img] [else (above img (col (- n 1) img))]))
 (define (row n img) (cond [(= 1 n) img] [else (beside img (row (- n 1) img))]))
 ; create blank playing board
-(define grid
-  (overlay/align "middle" "middle" 
+(define grid (overlay/align "middle" "middle" 
                  (col 4 (rectangle MEDSQUARE SMALLSQUARE "outline" "black"))
                  (row 4 (rectangle SMALLSQUARE MEDSQUARE "outline" "black"))))
+
 ; pick a random square
 (define (squareHandler n)
   (cond
@@ -104,12 +99,10 @@
                (+ (* i SMALLSQUARE) offS)
                (+ (* j SMALLSQUARE) offS)
                (genBoard (+ i 1) j))]))
-         
-; t-> image generates player's position of play
-(define (playBoard t)
-  MTB)
-(define smallRect (rectangle SMALLSQUARE (/ (- BIGHEIGHT (* 6 SMALLSQUARE)) 7) 
-                             "solid" "white"))
+
+; show the pieces available to choose from
+(define offY (/ (- BIGHEIGHT (* 6 SMALLSQUARE)) 7))
+(define smallRect (rectangle SMALLSQUARE offY "solid" "white"))
 (define (dispOptions n)
   (above side1 smallRect side2 smallRect side3 smallRect side4FRONTEND
          smallRect side5FRONTEND smallRect side6FRONTEND))
@@ -117,9 +110,102 @@
 ; check to see if gameState is a win for player
 (define (checkWin t)
   (image=? (gameState-board t) (gameState-played t)))
-(check-expect (checkWin (make-gameState
-             (genBoard 0 0) MTB
-             (make-dragState empty-image 0 0 #false) 0 #false)) #false)
+
+; find things at mouse pos
+(define offX (* (- BIGWIDTH RIGHTBOUND SMALLSQUARE) .5))
+(define (getImg x y)
+  (cond
+    [(and (> y offY) (< y (+ offY SMALLSQUARE))) side1]
+    [(and (> y (+ (* 2 offY) SMALLSQUARE)) (< y (* 2 (+ offY SMALLSQUARE)))) side2]
+    [(and (> y (+ (* 3 offY) (* 2 SMALLSQUARE))) (< y (* 3 (+ offY SMALLSQUARE)))) side3]
+    [(and (> y (+ (* 4 offY) (* 3 SMALLSQUARE))) (< y (* 4 (+ offY SMALLSQUARE)))) side4FRONTEND]
+    [(and (> y (+ (* 5 offY) (* 4 SMALLSQUARE))) (< y (* 5 (+ offY SMALLSQUARE)))) side5FRONTEND]
+    [(and (> y (+ (* 6 offY) (* 5 SMALLSQUARE))) (< y (* 6 (+ offY SMALLSQUARE)))) side6FRONTEND]
+    [else empty-image]))
+
+; find tile at mouse click set for dragging
+(define (handleClick t x y)
+  (cond
+    [(and (> x (+ offX RIGHTBOUND)) (< x (- BIGWIDTH offX)))
+     (make-gameState (gameState-board t)
+                     (gameState-played t)
+                     (make-dragState (getImg x y) x y #true)
+                     (gameState-timer t)
+                     #false)]
+    [else t]))
+
+;get centers (to place tiles) on top of the grid
+(define offW (* .5 (- LEFTBOUND (* 4 SMALLSQUARE))))
+(define offH (* .5 (- BIGHEIGHT (* 4 SMALLSQUARE))))
+(define (dropImg img onImg x y)
+  (cond
+    [(< x (+ LEFTBOUND offW SMALLSQUARE))
+     (cond
+       [(< y (+ offH SMALLSQUARE))
+        (place-image img (* .5 SMALLSQUARE) (* .5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 2 SMALLSQUARE)))
+        (place-image img (* .5 SMALLSQUARE) (* 1.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 3 SMALLSQUARE)))
+        (place-image img (* .5 SMALLSQUARE) (* 2.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 4 SMALLSQUARE)))
+        (place-image img (* .5 SMALLSQUARE) (* 3.5 SMALLSQUARE) onImg)])]
+    [(< x (+ LEFTBOUND offW (* 2 SMALLSQUARE)))
+     (cond
+       [(< y (+ offH SMALLSQUARE))
+        (place-image img (* 1.5 SMALLSQUARE) (* .5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 2 SMALLSQUARE)))
+        (place-image img (* 1.5 SMALLSQUARE) (* 1.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 3 SMALLSQUARE)))
+        (place-image img (* 1.5 SMALLSQUARE) (* 2.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 4 SMALLSQUARE)))
+        (place-image img (* 1.5 SMALLSQUARE) (* 3.5 SMALLSQUARE) onImg)])]
+    [(< x (+ LEFTBOUND offW (* 3 SMALLSQUARE)))
+     (cond
+       [(< y (+ offH SMALLSQUARE))
+        (place-image img (* 2.5 SMALLSQUARE) (* .5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 2 SMALLSQUARE)))
+        (place-image img (* 2.5 SMALLSQUARE) (* 1.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 3 SMALLSQUARE)))
+        (place-image img (* 2.5 SMALLSQUARE) (* 2.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 4 SMALLSQUARE)))
+        (place-image img (* 2.5 SMALLSQUARE) (* 3.5 SMALLSQUARE) onImg)])]
+    [(< x (+ LEFTBOUND offW (* 4 SMALLSQUARE)))
+     (cond
+       [(< y (+ offH SMALLSQUARE))
+        (place-image img (* 3.5 SMALLSQUARE) (* .5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 2 SMALLSQUARE)))
+        (place-image img (* 3.5 SMALLSQUARE) (* 1.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 3 SMALLSQUARE)))
+        (place-image img (* 3.5 SMALLSQUARE) (* 2.5 SMALLSQUARE) onImg)]
+       [(< y (+ offH (* 4 SMALLSQUARE)))
+        (place-image img (* 3.5 SMALLSQUARE) (* 3.5 SMALLSQUARE) onImg)])]))
+
+;find place to release the dragged image
+(define (handleReleaseOfDrag t x y)
+  (cond
+    [(and (and (> x (+ LEFTBOUND offW)) (< x (- RIGHTBOUND offW)))
+          (and (> y offH) (< y (- BIGHEIGHT offH))))
+     (make-gameState
+      (gameState-board t)
+      (dropImg (cond
+                 [(image=? (dragState-img (gameState-dragging t))
+                           side6FRONTEND) side6]
+                 [(image=? (dragState-img (gameState-dragging t))
+                           side5FRONTEND) side5]
+                 [(image=? (dragState-img (gameState-dragging t))
+                           side4FRONTEND) side4]
+                 [else (dragState-img (gameState-dragging t))])                  
+               (gameState-played t) x y)
+      (make-dragState empty-image 0 0 #false)
+      (gameState-timer t)
+      (checkWin t))]
+    [else
+     (make-gameState
+      (gameState-board t)
+      (gameState-played t)
+      (make-dragState empty-image 0 0 #false)
+      (gameState-timer t)
+      (gameState-won t))]))
   
 ; render t -> image
 (define (render t)
@@ -144,23 +230,38 @@
        (overlay (gameState-played t) grid ) (* .5 (+ LEFTBOUND RIGHTBOUND)) (* .5 BIGHEIGHT)
        (place-image (dispOptions 0) (* .5 (+ RIGHTBOUND BIGWIDTH)) (* .5 BIGHEIGHT) MTS)))))))
 
-(define (mouseh t x y me) t)
+; handle mouse events gameState->gameState
+(define (mouseh t x y me)
+  (cond
+    [(string=? me ONCLICK) (handleClick t x y)]
+    [(string=? me ONRELEASE) (handleReleaseOfDrag t x y)]
+    [(string=? me DRAG)
+     (make-gameState (gameState-board t)
+                     (gameState-played t)
+                     (make-dragState (dragState-img
+                                      (gameState-dragging t))
+                                     x y #true)
+                     (gameState-timer t)
+                     #false)]
+    [(string=? me MOVING) t]
+    [(string=? me ENTRY) t]
+    [(string=? me EXIT) (make-gameState (gameState-board t)
+                                        (gameState-played t)
+                                        (make-dragState empty-scene 0 0 #false)
+                                        (gameState-timer t)
+                                        (gameState-won t))]))
 
+; gameState->image
 (define (tock t)
   (make-gameState (gameState-board t)
                   (gameState-played t)
                   (gameState-dragging t)
                   (cond
                     [(gameState-won t) (gameState-timer t)]
-                    [else
-                     (cond
-                       [(checkWin t) (gameState-timer t)]
-                       [else (+ (gameState-timer t) .05)])])
-                  (cond
-                    [(gameState-won t) #true]
-                    [else (checkWin t)])))
+                    [else (+ (gameState-timer t) .05)])
+                  (gameState-won t)))
 
-; gameRunner
+; gameRunner gameState->gameState
 (define (main t)
   (big-bang (make-gameState
              (genBoard 0 0) MTB
